@@ -25,9 +25,9 @@ from plane.utils.path_validator import get_allowed_hosts, get_safe_redirect_url,
 
 
 def _clear_oidc_session(request):
-    request.session.pop("state", None)
+    request.session.pop("oidc_state", None)
     request.session.pop("oidc_nonce", None)
-    request.session.pop("next_path", None)
+    request.session.pop("oidc_next_path", None)
 
 
 def _is_oidc_enabled():
@@ -42,7 +42,7 @@ class OIDCOauthInitiateSpaceEndpoint(View):
         request.session["host"] = base_host(request=request, is_space=True)
         next_path = request.GET.get("next_path")
         if next_path:
-            request.session["next_path"] = str(next_path)
+            request.session["oidc_next_path"] = str(next_path)
 
         instance = Instance.objects.first()
         if instance is None or not instance.is_setup_done:
@@ -71,7 +71,7 @@ class OIDCOauthInitiateSpaceEndpoint(View):
             state = uuid.uuid4().hex
             nonce = uuid.uuid4().hex
             provider = OIDCOAuthProvider(request=request, state=state, nonce=nonce, is_space=True)
-            request.session["state"] = state
+            request.session["oidc_state"] = state
             request.session["oidc_nonce"] = nonce
             return HttpResponseRedirect(provider.get_auth_url())
         except AuthenticationException as e:
@@ -87,8 +87,8 @@ class OIDCCallbackSpaceEndpoint(View):
         code = request.GET.get("code")
         state = request.GET.get("state")
         host = request.session.get("host")
-        next_path = request.session.get("next_path")
-        session_state = request.session.get("state")
+        next_path = request.session.get("oidc_next_path")
+        session_state = request.session.get("oidc_state")
         session_nonce = request.session.get("oidc_nonce")
 
         if not session_state or not session_nonce or not state or state != session_state:

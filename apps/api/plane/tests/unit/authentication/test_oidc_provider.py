@@ -11,6 +11,7 @@ from django.test import RequestFactory
 from plane.authentication.adapter.error import AUTHENTICATION_ERROR_CODES, AuthenticationException
 from plane.authentication.provider.oauth.oidc import OIDCOAuthProvider
 from plane.authentication.views.app.oidc import OIDCCallbackEndpoint, OIDCOauthInitiateEndpoint
+from plane.authentication.views.space.oidc import OIDCCallbackSpaceEndpoint
 
 OIDC_CLIENT_SECRET = "test-oidc-client-secret-with-32-bytes"
 
@@ -202,6 +203,61 @@ def test_callback_rejects_missing_session_state_and_nonce():
 
     assert response.status_code == 302
     assert f"error_code={AUTHENTICATION_ERROR_CODES['OIDC_OAUTH_PROVIDER_ERROR']}" in response["Location"]
+
+
+def test_app_callback_does_not_clear_other_oauth_session_state():
+    request = RequestFactory().get("/auth/oidc/callback/?code=code&state=wrong")
+    request.session = {
+        "state": "github-state",
+        "next_path": "/workspace",
+        "oidc_state": "oidc-state",
+        "oidc_nonce": "nonce",
+        "oidc_next_path": "/oidc-path",
+    }
+
+    response = OIDCCallbackEndpoint.as_view()(request)
+
+    assert response.status_code == 302
+    assert request.session["state"] == "github-state"
+    assert request.session["next_path"] == "/workspace"
+    assert "oidc_state" not in request.session
+    assert "oidc_nonce" not in request.session
+    assert "oidc_next_path" not in request.session
+
+
+def test_space_callback_does_not_clear_other_oauth_session_state():
+    request = RequestFactory().get("/auth/spaces/oidc/callback/?code=code&state=wrong")
+    request.session = {
+        "state": "gitlab-state",
+        "next_path": "/workspace/project",
+        "oidc_state": "oidc-state",
+        "oidc_nonce": "nonce",
+        "oidc_next_path": "/space-path",
+    }
+
+    response = OIDCCallbackSpaceEndpoint.as_view()(request)
+
+    assert response.status_code == 302
+    assert request.session["state"] == "gitlab-state"
+    assert request.session["next_path"] == "/workspace/project"
+    assert "oidc_state" not in request.session
+    assert "oidc_nonce" not in request.session
+    assert "oidc_next_path" not in request.session
+
+
+def test_callback_uses_oidc_state_not_generic_oauth_state():
+    request = RequestFactory().get("/auth/oidc/callback/?code=code&state=github-state")
+    request.session = {
+        "state": "github-state",
+        "oidc_state": "oidc-state",
+        "oidc_nonce": "nonce",
+    }
+
+    response = OIDCCallbackEndpoint.as_view()(request)
+
+    assert response.status_code == 302
+    assert f"error_code={AUTHENTICATION_ERROR_CODES['OIDC_OAUTH_PROVIDER_ERROR']}" in response["Location"]
+    assert request.session["state"] == "github-state"
 
 
 def test_initiate_rejects_when_oidc_is_disabled(monkeypatch):
