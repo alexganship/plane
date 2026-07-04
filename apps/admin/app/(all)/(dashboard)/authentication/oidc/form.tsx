@@ -198,10 +198,16 @@ export function InstanceOidcConfigForm(props: Props) {
 
   const OIDC_SERVICE_FIELD: TCopyField[] = [
     {
-      key: "Callback_URL",
-      label: "Callback URL",
+      key: "App_Callback_URL",
+      label: "App callback URL",
       url: `${originURL}/auth/oidc/callback/`,
-      description: <>Paste this into your OIDC provider redirect URI list.</>,
+      description: <>Paste this into your OIDC provider redirect URI list for the main app.</>,
+    },
+    {
+      key: "Space_Callback_URL",
+      label: "Space callback URL",
+      url: `${originURL}/auth/spaces/oidc/callback/`,
+      description: <>Paste this into your OIDC provider redirect URI list for Plane Space.</>,
     },
   ];
 

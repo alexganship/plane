@@ -26,7 +26,7 @@ class OIDCOAuthProvider(OauthAdapter):
     provider = "oidc"
     default_scope = "openid email profile"
 
-    def __init__(self, request, code=None, state=None, nonce=None, callback=None):
+    def __init__(self, request, code=None, state=None, nonce=None, callback=None, is_space=False):
         (
             OIDC_DISCOVERY_URL,
             OIDC_ISSUER_URL,
@@ -99,7 +99,8 @@ class OIDCOAuthProvider(OauthAdapter):
         client_id = OIDC_CLIENT_ID
         client_secret = OIDC_CLIENT_SECRET
         scope = OIDC_SCOPE or self.default_scope
-        redirect_uri = f"""{"https" if request.is_secure() else "http"}://{request.get_host()}/auth/oidc/callback/"""
+        callback_path = "/auth/spaces/oidc/callback/" if is_space else "/auth/oidc/callback/"
+        redirect_uri = f"""{"https" if request.is_secure() else "http"}://{request.get_host()}{callback_path}"""
         url_params = {
             "client_id": client_id,
             "redirect_uri": redirect_uri,
@@ -217,7 +218,7 @@ class OIDCOAuthProvider(OauthAdapter):
 
     def _validate_nonce(self, claims):
         expected_nonce = self.request.session.get("oidc_nonce")
-        if expected_nonce and claims.get("nonce") != expected_nonce:
+        if not expected_nonce or claims.get("nonce") != expected_nonce:
             raise self._provider_error()
 
     def _get_token_auth(self, data):
@@ -317,7 +318,12 @@ class OIDCOAuthProvider(OauthAdapter):
 
     def set_user_data(self):
         user_info_response = self.get_user_response()
-        claims = {**self.id_token_claims, **user_info_response}
+        id_token_sub = self.id_token_claims.get("sub")
+        userinfo_sub = user_info_response.get("sub")
+        if not id_token_sub or (userinfo_sub and str(userinfo_sub) != str(id_token_sub)):
+            raise self._provider_error()
+
+        claims = {**self.id_token_claims, **user_info_response, "sub": id_token_sub}
         self._validate_authorization(claims=claims)
 
         name = claims.get("name") or claims.get("preferred_username") or claims.get("email")

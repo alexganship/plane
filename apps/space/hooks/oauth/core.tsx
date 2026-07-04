@@ -77,7 +77,7 @@ export const useCoreOAuthConfig = (oauthActionText: string): TOAuthConfigs => {
       text: `${oauthActionText} with OIDC`,
       icon: <ShieldCheck className="h-[18px] w-[18px]" />,
       onClick: () => {
-        window.location.assign(`${API_BASE_URL}/auth/oidc/${next_path ? `?next_path=${next_path}` : ``}`);
+        window.location.assign(`${API_BASE_URL}/auth/spaces/oidc/${next_path ? `?next_path=${next_path}` : ``}`);
       },
       enabled: config?.is_oidc_enabled,
     },

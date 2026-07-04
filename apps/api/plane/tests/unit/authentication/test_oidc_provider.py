@@ -10,6 +10,7 @@ from django.test import RequestFactory
 
 from plane.authentication.adapter.error import AUTHENTICATION_ERROR_CODES, AuthenticationException
 from plane.authentication.provider.oauth.oidc import OIDCOAuthProvider
+from plane.authentication.views.app.oidc import OIDCCallbackEndpoint, OIDCOauthInitiateEndpoint
 
 OIDC_CLIENT_SECRET = "test-oidc-client-secret-with-32-bytes"
 
@@ -60,7 +61,7 @@ def patch_config(monkeypatch, config):
     )
 
 
-def patch_oidc_http(monkeypatch, claims, issuer="https://auth.example.com/application/o/plane/"):
+def patch_oidc_http(monkeypatch, claims, issuer="https://auth.example.com/application/o/plane/", userinfo_claims=None):
     id_token = jwt.encode(
         {
             "iss": issuer,
@@ -88,7 +89,7 @@ def patch_oidc_http(monkeypatch, claims, issuer="https://auth.example.com/applic
         if url.endswith(".well-known/openid-configuration"):
             return MockResponse(discovery)
         if url.endswith("userinfo"):
-            return MockResponse({})
+            return MockResponse(userinfo_claims or {})
         return MockResponse({}, status_code=404)
 
     def mock_post(url, *args, **kwargs):
@@ -150,3 +151,69 @@ def test_keycloak_client_roles_allow_login(monkeypatch):
     provider.set_user_data()
 
     assert provider.user_data["email"] == "user@example.com"
+
+
+def test_userinfo_sub_must_match_id_token_sub(monkeypatch):
+    config = make_config()
+    patch_config(monkeypatch, config)
+    patch_oidc_http(monkeypatch, {}, userinfo_claims={"sub": "different-user"})
+
+    provider = OIDCOAuthProvider(request=make_request(), code="code")
+    provider.set_token_data()
+
+    with pytest.raises(AuthenticationException) as exc:
+        provider.set_user_data()
+
+    assert exc.value.error_code == AUTHENTICATION_ERROR_CODES["OIDC_OAUTH_PROVIDER_ERROR"]
+
+
+def test_nonce_is_required_for_token_validation(monkeypatch):
+    config = make_config()
+    patch_config(monkeypatch, config)
+    patch_oidc_http(monkeypatch, {})
+    request = make_request()
+    request.session = {}
+
+    provider = OIDCOAuthProvider(request=request, code="code")
+
+    with pytest.raises(AuthenticationException) as exc:
+        provider.set_token_data()
+
+    assert exc.value.error_code == AUTHENTICATION_ERROR_CODES["OIDC_OAUTH_PROVIDER_ERROR"]
+
+
+def test_space_callback_url_is_used_for_space_flow(monkeypatch):
+    config = make_config()
+    patch_config(monkeypatch, config)
+    patch_oidc_http(monkeypatch, {})
+    request = make_request()
+
+    provider = OIDCOAuthProvider(request=request, state="state", nonce="nonce", is_space=True)
+
+    assert provider.redirect_uri == "http://plane.test/auth/spaces/oidc/callback/"
+    assert "redirect_uri=http%3A%2F%2Fplane.test%2Fauth%2Fspaces%2Foidc%2Fcallback%2F" in provider.auth_url
+
+
+def test_callback_rejects_missing_session_state_and_nonce():
+    request = RequestFactory().get("/auth/oidc/callback/?code=code&state=")
+    request.session = {}
+
+    response = OIDCCallbackEndpoint.as_view()(request)
+
+    assert response.status_code == 302
+    assert f"error_code={AUTHENTICATION_ERROR_CODES['OIDC_OAUTH_PROVIDER_ERROR']}" in response["Location"]
+
+
+def test_initiate_rejects_when_oidc_is_disabled(monkeypatch):
+    class FakeInstance:
+        is_setup_done = True
+
+    monkeypatch.setattr("plane.authentication.views.app.oidc.Instance.objects.first", lambda: FakeInstance())
+    monkeypatch.setattr("plane.authentication.views.app.oidc.get_configuration_value", lambda keys: ("0",))
+    request = RequestFactory().get("/auth/oidc/")
+    request.session = {}
+
+    response = OIDCOauthInitiateEndpoint.as_view()(request)
+
+    assert response.status_code == 302
+    assert f"error_code={AUTHENTICATION_ERROR_CODES['OIDC_NOT_CONFIGURED']}" in response["Location"]
