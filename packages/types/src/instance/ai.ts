@@ -4,7 +4,7 @@
  * See the LICENSE file for details.
  */
 
-export type TInstanceAIProvider = "openai" | "openai_compatible";
+export type TInstanceAIProvider = "openai" | "openai_compatible" | "anthropic" | "gemini";
 
 export type TInstanceAIConfigurationKeys =
   | "LLM_API_KEY"

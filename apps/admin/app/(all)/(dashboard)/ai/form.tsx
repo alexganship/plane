@@ -25,6 +25,22 @@ type AIFormValues = Record<TInstanceAIConfigurationKeys, string>;
 const LLM_PROVIDER_OPTIONS: Record<TInstanceAIProvider, string> = {
   openai: "OpenAI",
   openai_compatible: "OpenAI Compatible",
+  anthropic: "Anthropic",
+  gemini: "Gemini",
+};
+
+const LLM_MODEL_EXAMPLES: Record<TInstanceAIProvider, string> = {
+  anthropic: "claude-3-sonnet-20240229",
+  gemini: "gemini-pro",
+  openai: "gpt-4o-mini",
+  openai_compatible: "llama3.1",
+};
+
+const LLM_MODEL_HELPER_TEXT: Record<TInstanceAIProvider, string> = {
+  anthropic: "claude-3-sonnet-20240229, claude-3-haiku-20240307, or claude-2.",
+  gemini: "gemini-pro, gemini-1.5-pro-latest, or gemini-pro-vision.",
+  openai: "gpt-4o-mini.",
+  openai_compatible: "llama3.1, qwen2.5-coder, or mistral.",
 };
 
 export function InstanceAIForm(props: IInstanceAIForm) {
@@ -49,9 +65,15 @@ export function InstanceAIForm(props: IInstanceAIForm) {
 
   const llmProvider = watch("LLM_PROVIDER");
   const isOpenAICompatible = llmProvider === "openai_compatible";
+  const selectedProvider = Object.prototype.hasOwnProperty.call(LLM_PROVIDER_OPTIONS, llmProvider)
+    ? (llmProvider as TInstanceAIProvider)
+    : undefined;
   const apiKeyFieldKey = isOpenAICompatible ? "LLM_OPENAI_COMPATIBLE_API_KEY" : "LLM_API_KEY";
-  const providerLabel =
-    LLM_PROVIDER_OPTIONS[(llmProvider as TInstanceAIProvider) || "openai"] ?? LLM_PROVIDER_OPTIONS.openai;
+  const providerLabel = selectedProvider ? LLM_PROVIDER_OPTIONS[selectedProvider] : "Unknown provider";
+  const modelExample = selectedProvider ? LLM_MODEL_EXAMPLES[selectedProvider] : "model-name";
+  const modelHelperText = selectedProvider ? LLM_MODEL_HELPER_TEXT[selectedProvider] : "a supported model name.";
+  const apiKeyPlaceholder =
+    selectedProvider === "anthropic" ? "sk-ant-..." : selectedProvider === "gemini" ? "AIza..." : "sk-...";
 
   const aiFormFields: TControllerInputFormField[] = [
     {
@@ -60,8 +82,7 @@ export function InstanceAIForm(props: IInstanceAIForm) {
       label: "LLM Model",
       description: (
         <>
-          Use an OpenAI or OpenAI-compatible model name, for example{" "}
-          {isOpenAICompatible ? "llama3.1, qwen2.5-coder, or mistral." : "gpt-4o-mini."}{" "}
+          Use a provider model name, for example {modelHelperText}{" "}
           <a
             href="https://platform.openai.com/docs/models/overview"
             target="_blank"
@@ -72,7 +93,7 @@ export function InstanceAIForm(props: IInstanceAIForm) {
           </a>
         </>
       ),
-      placeholder: isOpenAICompatible ? "llama3.1" : "gpt-4o-mini",
+      placeholder: modelExample,
       error: Boolean(errors.LLM_MODEL),
       required: false,
     },
@@ -98,6 +119,10 @@ export function InstanceAIForm(props: IInstanceAIForm) {
         <>
           {isOpenAICompatible ? (
             "Optional. Required only if your OpenAI-compatible gateway requires authentication."
+          ) : selectedProvider === "anthropic" ? (
+            "Use your Anthropic API key."
+          ) : selectedProvider === "gemini" ? (
+            "Use your Gemini API key."
           ) : (
             <>
               You will find your API key{" "}
@@ -113,7 +138,7 @@ export function InstanceAIForm(props: IInstanceAIForm) {
           )}
         </>
       ),
-      placeholder: "sk-asddassdfasdefqsdfasd23das3dasdcasd",
+      placeholder: apiKeyPlaceholder,
       error: Boolean(errors[apiKeyFieldKey]),
       required: false,
     },
@@ -137,10 +162,8 @@ export function InstanceAIForm(props: IInstanceAIForm) {
     <div className="space-y-8">
       <div className="space-y-3">
         <div>
-          <div className="pb-1 text-18 font-medium text-primary">OpenAI / OpenAI-compatible</div>
-          <div className="text-13 font-regular text-tertiary">
-            Configure OpenAI or self-hosted OpenAI-compatible LLM endpoints.
-          </div>
+          <div className="pb-1 text-18 font-medium text-primary">AI provider</div>
+          <div className="text-13 font-regular text-tertiary">Configure the LLM provider for Plane AI features.</div>
         </div>
         <div className="grid-col grid w-full grid-cols-1 items-center justify-between gap-x-12 gap-y-8 lg:grid-cols-3">
           <div className="flex flex-col gap-1">
@@ -165,7 +188,7 @@ export function InstanceAIForm(props: IInstanceAIForm) {
               )}
             />
             <p className="pt-0.5 text-11 text-tertiary">
-              Choose OpenAI or an OpenAI-compatible server such as Ollama, vLLM, or LiteLLM.
+              Choose OpenAI, Anthropic, Gemini, or an OpenAI-compatible server such as Ollama, vLLM, or LiteLLM.
             </p>
           </div>
           {aiFormFields.map((field) => (
@@ -192,7 +215,7 @@ export function InstanceAIForm(props: IInstanceAIForm) {
         <div className="relative inline-flex items-center gap-1.5 rounded-sm border border-accent-subtle bg-accent-subtle px-4 py-2 text-caption-sm-regular text-accent-secondary">
           <Lightbulb className="size-4" />
           <div>
-            Use OpenAI-compatible endpoints for self-hosted LLM servers. For other AI provider needs, please get in{" "}
+            Use OpenAI-compatible endpoints for self-hosted LLM servers. For custom AI provider needs, please get in{" "}
             <a className="font-medium underline" href="https://plane.so/contact">
               touch with us.
             </a>
