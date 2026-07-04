@@ -60,6 +60,21 @@ class TestExternalLLMConfig:
 
     @patch("plane.app.views.external.base.log_exception")
     @patch("plane.app.views.external.base.get_configuration_value")
+    def test_openai_uses_default_model_when_model_is_blank(
+        self, mock_get_configuration_value, mock_log_exception
+    ):
+        mock_get_configuration_value.return_value = ("sk-test", "openai", "", "")
+
+        llm_config = base.get_llm_config()
+
+        assert llm_config.error is None
+        assert llm_config.api_key == "sk-test"
+        assert llm_config.model == "gpt-4o-mini"
+        assert llm_config.provider == "openai"
+        mock_log_exception.assert_not_called()
+
+    @patch("plane.app.views.external.base.log_exception")
+    @patch("plane.app.views.external.base.get_configuration_value")
     def test_openai_compatible_accepts_blank_api_key_and_arbitrary_model(
         self, mock_get_configuration_value, mock_log_exception
     ):
@@ -94,6 +109,24 @@ class TestExternalLLMConfig:
         llm_config = base.get_llm_config()
 
         assert llm_config.error == "LLM_BASE_URL is required for openai_compatible provider"
+        assert llm_config.api_key is None
+        mock_log_exception.assert_called_once()
+
+    @patch("plane.app.views.external.base.log_exception")
+    @patch("plane.app.views.external.base.get_configuration_value")
+    def test_openai_compatible_requires_model(
+        self, mock_get_configuration_value, mock_log_exception
+    ):
+        mock_get_configuration_value.return_value = (
+            "",
+            "openai_compatible",
+            "",
+            "http://localhost:11434/v1",
+        )
+
+        llm_config = base.get_llm_config()
+
+        assert llm_config.error == "LLM_MODEL is required for openai_compatible provider"
         assert llm_config.api_key is None
         mock_log_exception.assert_called_once()
 

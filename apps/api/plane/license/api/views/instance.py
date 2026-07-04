@@ -26,9 +26,12 @@ from django.views.decorators.cache import cache_control
 
 
 def has_llm_configured(llm_api_key, llm_provider, llm_model, llm_base_url):
-    return bool(llm_api_key) or (
-        (llm_provider or "").strip().lower() == "openai_compatible" and bool(llm_model) and bool(llm_base_url)
-    )
+    provider = (llm_provider or "openai").strip().lower()
+    if provider == "openai_compatible":
+        return bool(llm_model) and bool(llm_base_url)
+    if provider == "openai":
+        return bool(llm_api_key)
+    return False
 
 
 class InstanceEndpoint(BaseAPIView):

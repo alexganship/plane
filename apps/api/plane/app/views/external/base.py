@@ -158,9 +158,7 @@ def get_llm_config() -> LLMConfig:
             return LLMConfig(None, None, provider_key, error=error)
 
         if not model:
-            error = "LLM_MODEL is required for openai provider"
-            log_exception(ValueError(error))
-            return LLMConfig(None, None, provider_key, error=error)
+            model = provider.default_model
 
     else:
         if not api_key:
