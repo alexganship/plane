@@ -102,6 +102,57 @@ class TestExternalLLMConfig:
         assert llm_config.base_url == "http://localhost:11434/v1"
         mock_log_exception.assert_not_called()
 
+    @pytest.mark.parametrize(
+        ("base_url", "expected"),
+        [
+            (" http://ollama:11434 ", "http://ollama:11434/v1"),
+            ("http://ollama:11434/", "http://ollama:11434/v1"),
+            ("http://ollama:11434/v1/", "http://ollama:11434/v1"),
+            ("https://llm.example.com/proxy/openai/v1/", "https://llm.example.com/proxy/openai/v1"),
+        ],
+    )
+    def test_openai_compatible_base_url_normalization(self, base_url, expected):
+        normalized_base_url, error = base.normalize_openai_compatible_base_url(base_url)
+
+        assert normalized_base_url == expected
+        assert error is None
+
+    @pytest.mark.parametrize(
+        ("base_url", "expected_error"),
+        [
+            ("", "LLM_BASE_URL is required for openai_compatible provider"),
+            ("ollama:11434", "LLM_BASE_URL must be a valid http(s) URL"),
+            ("ftp://ollama:11434/v1", "LLM_BASE_URL must be a valid http(s) URL"),
+            ("http://user:pass@ollama:11434/v1", "LLM_BASE_URL must not include username or password"),
+            ("http://ollama:11434/v1?token=test", "LLM_BASE_URL must not include query string or fragment"),
+            ("http://ollama:11434/v1#models", "LLM_BASE_URL must not include query string or fragment"),
+        ],
+    )
+    def test_openai_compatible_base_url_validation(self, base_url, expected_error):
+        normalized_base_url, error = base.normalize_openai_compatible_base_url(base_url)
+
+        assert normalized_base_url is None
+        assert error == expected_error
+
+    @patch("plane.app.views.external.base.log_exception")
+    @patch("plane.app.views.external.base.get_configuration_value")
+    def test_openai_compatible_config_uses_normalized_base_url(
+        self, mock_get_configuration_value, mock_log_exception
+    ):
+        mock_get_configuration_value.return_value = (
+            "",
+            "",
+            "openai_compatible",
+            "llama3.1:8b",
+            " http://localhost:11434/ ",
+        )
+
+        llm_config = base.get_llm_config()
+
+        assert llm_config.error is None
+        assert llm_config.base_url == "http://localhost:11434/v1"
+        mock_log_exception.assert_not_called()
+
     @patch("plane.app.views.external.base.log_exception")
     @patch("plane.app.views.external.base.get_configuration_value")
     def test_openai_compatible_does_not_reuse_openai_api_key(
@@ -175,6 +226,26 @@ class TestExternalLLMConfig:
         llm_config = base.get_llm_config()
 
         assert llm_config.error == "LLM_MODEL is required for openai_compatible provider"
+        assert llm_config.api_key is None
+        assert llm_config.base_url == "http://localhost:11434/v1"
+        mock_log_exception.assert_called_once()
+
+    @patch("plane.app.views.external.base.log_exception")
+    @patch("plane.app.views.external.base.get_configuration_value")
+    def test_openai_compatible_rejects_invalid_base_url(
+        self, mock_get_configuration_value, mock_log_exception
+    ):
+        mock_get_configuration_value.return_value = (
+            "",
+            "",
+            "openai_compatible",
+            "llama3.1:8b",
+            "ftp://localhost:11434/v1",
+        )
+
+        llm_config = base.get_llm_config()
+
+        assert llm_config.error == "LLM_BASE_URL must be a valid http(s) URL"
         assert llm_config.api_key is None
         mock_log_exception.assert_called_once()
 

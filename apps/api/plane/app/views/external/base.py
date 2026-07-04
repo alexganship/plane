@@ -6,6 +6,7 @@
 import os
 from dataclasses import dataclass
 from typing import List, Dict, Tuple
+from urllib.parse import urlsplit, urlunsplit
 
 # Third party import
 from openai import OpenAI
@@ -92,6 +93,28 @@ class LLMConfig:
     error: str | None = None
 
 
+def normalize_openai_compatible_base_url(base_url: str | None) -> Tuple[str | None, str | None]:
+    value = (base_url or "").strip()
+    if not value:
+        return None, "LLM_BASE_URL is required for openai_compatible provider"
+
+    parsed_url = urlsplit(value)
+    if parsed_url.scheme not in {"http", "https"} or not parsed_url.netloc:
+        return None, "LLM_BASE_URL must be a valid http(s) URL"
+
+    if parsed_url.username or parsed_url.password:
+        return None, "LLM_BASE_URL must not include username or password"
+
+    if parsed_url.query or parsed_url.fragment:
+        return None, "LLM_BASE_URL must not include query string or fragment"
+
+    path = parsed_url.path.rstrip("/")
+    if not path:
+        path = "/v1"
+
+    return urlunsplit((parsed_url.scheme, parsed_url.netloc, path, "", "")), None
+
+
 def get_llm_config() -> LLMConfig:
     """
     Helper to get LLM configuration values, returns:
@@ -139,21 +162,22 @@ def get_llm_config() -> LLMConfig:
         return LLMConfig(None, None, None, error=error)
 
     if provider_key == "openai_compatible":
-        if not base_url:
-            error = "LLM_BASE_URL is required for openai_compatible provider"
+        normalized_base_url, base_url_error = normalize_openai_compatible_base_url(base_url)
+        if base_url_error:
+            error = base_url_error
             log_exception(ValueError(error))
             return LLMConfig(None, None, provider_key, error=error)
 
         if not model:
             error = "LLM_MODEL is required for openai_compatible provider"
             log_exception(ValueError(error))
-            return LLMConfig(None, None, provider_key, base_url=base_url, error=error)
+            return LLMConfig(None, None, provider_key, base_url=normalized_base_url, error=error)
 
         return LLMConfig(
             compatible_api_key or OPENAI_COMPATIBLE_PLACEHOLDER_API_KEY,
             model,
             provider_key,
-            base_url=base_url,
+            base_url=normalized_base_url,
         )
 
     if provider_key == "openai":
