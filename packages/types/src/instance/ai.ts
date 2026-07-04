@@ -4,4 +4,11 @@
  * See the LICENSE file for details.
  */
 
-export type TInstanceAIConfigurationKeys = "LLM_API_KEY" | "LLM_MODEL";
+export type TInstanceAIProvider = "openai" | "openai_compatible";
+
+export type TInstanceAIConfigurationKeys =
+  | "LLM_API_KEY"
+  | "LLM_BASE_URL"
+  | "LLM_MODEL"
+  | "LLM_OPENAI_COMPATIBLE_API_KEY"
+  | "LLM_PROVIDER";

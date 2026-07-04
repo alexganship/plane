@@ -25,6 +25,15 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_control
 
 
+def has_llm_configured(llm_api_key, llm_provider, llm_model, llm_base_url):
+    provider = (llm_provider or "openai").strip().lower()
+    if provider == "openai_compatible":
+        return bool(llm_model) and bool(llm_base_url)
+    if provider == "openai":
+        return bool(llm_api_key)
+    return False
+
+
 class InstanceEndpoint(BaseAPIView):
     def get_permissions(self):
         if self.request.method == "PATCH":
@@ -64,6 +73,9 @@ class InstanceEndpoint(BaseAPIView):
             POSTHOG_HOST,
             UNSPLASH_ACCESS_KEY,
             LLM_API_KEY,
+            LLM_PROVIDER,
+            LLM_MODEL,
+            LLM_BASE_URL,
         ) = get_configuration_value(
             [
                 {
@@ -127,6 +139,18 @@ class InstanceEndpoint(BaseAPIView):
                     "key": "LLM_API_KEY",
                     "default": os.environ.get("LLM_API_KEY", ""),
                 },
+                {
+                    "key": "LLM_PROVIDER",
+                    "default": os.environ.get("LLM_PROVIDER", "openai"),
+                },
+                {
+                    "key": "LLM_MODEL",
+                    "default": os.environ.get("LLM_MODEL", ""),
+                },
+                {
+                    "key": "LLM_BASE_URL",
+                    "default": os.environ.get("LLM_BASE_URL", ""),
+                },
             ]
         )
 
@@ -155,8 +179,8 @@ class InstanceEndpoint(BaseAPIView):
         # Unsplash
         data["has_unsplash_configured"] = bool(UNSPLASH_ACCESS_KEY)
 
-        # Open AI settings
-        data["has_llm_configured"] = bool(LLM_API_KEY)
+        # LLM settings
+        data["has_llm_configured"] = has_llm_configured(LLM_API_KEY, LLM_PROVIDER, LLM_MODEL, LLM_BASE_URL)
 
         # File size settings
         data["file_size_limit"] = float(os.environ.get("FILE_SIZE_LIMIT", 5242880))

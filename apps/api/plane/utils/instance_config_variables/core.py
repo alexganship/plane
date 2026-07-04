@@ -290,6 +290,12 @@ llm_config_variables = [
         "is_encrypted": True,
     },
     {
+        "key": "LLM_OPENAI_COMPATIBLE_API_KEY",
+        "value": os.environ.get("LLM_OPENAI_COMPATIBLE_API_KEY"),
+        "category": "AI",
+        "is_encrypted": True,
+    },
+    {
         "key": "LLM_PROVIDER",
         "value": os.environ.get("LLM_PROVIDER", "openai"),
         "category": "AI",
@@ -298,6 +304,12 @@ llm_config_variables = [
     {
         "key": "LLM_MODEL",
         "value": os.environ.get("LLM_MODEL", "gpt-4o-mini"),
+        "category": "AI",
+        "is_encrypted": False,
+    },
+    {
+        "key": "LLM_BASE_URL",
+        "value": os.environ.get("LLM_BASE_URL", ""),
         "category": "AI",
         "is_encrypted": False,
     },
