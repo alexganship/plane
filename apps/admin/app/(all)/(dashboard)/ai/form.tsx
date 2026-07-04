@@ -25,20 +25,14 @@ type AIFormValues = Record<TInstanceAIConfigurationKeys, string>;
 const LLM_PROVIDER_OPTIONS: Record<TInstanceAIProvider, string> = {
   openai: "OpenAI",
   openai_compatible: "OpenAI Compatible",
-  anthropic: "Anthropic",
-  gemini: "Gemini",
 };
 
 const LLM_MODEL_EXAMPLES: Record<TInstanceAIProvider, string> = {
-  anthropic: "claude-3-sonnet-20240229",
-  gemini: "gemini-pro",
   openai: "gpt-4o-mini",
   openai_compatible: "llama3.1",
 };
 
 const LLM_MODEL_HELPER_TEXT: Record<TInstanceAIProvider, string> = {
-  anthropic: "claude-3-sonnet-20240229, claude-3-haiku-20240307, or claude-2.",
-  gemini: "gemini-pro, gemini-1.5-pro-latest, or gemini-pro-vision.",
   openai: "gpt-4o-mini.",
   openai_compatible: "llama3.1, qwen2.5-coder, or mistral.",
 };
@@ -72,8 +66,6 @@ export function InstanceAIForm(props: IInstanceAIForm) {
   const providerLabel = selectedProvider ? LLM_PROVIDER_OPTIONS[selectedProvider] : "Unknown provider";
   const modelExample = selectedProvider ? LLM_MODEL_EXAMPLES[selectedProvider] : "model-name";
   const modelHelperText = selectedProvider ? LLM_MODEL_HELPER_TEXT[selectedProvider] : "a supported model name.";
-  const apiKeyPlaceholder =
-    selectedProvider === "anthropic" ? "sk-ant-..." : selectedProvider === "gemini" ? "AIza..." : "sk-...";
 
   const aiFormFields: TControllerInputFormField[] = [
     {
@@ -119,10 +111,6 @@ export function InstanceAIForm(props: IInstanceAIForm) {
         <>
           {isOpenAICompatible ? (
             "Optional. Required only if your OpenAI-compatible gateway requires authentication."
-          ) : selectedProvider === "anthropic" ? (
-            "Use your Anthropic API key."
-          ) : selectedProvider === "gemini" ? (
-            "Use your Gemini API key."
           ) : (
             <>
               You will find your API key{" "}
@@ -138,7 +126,7 @@ export function InstanceAIForm(props: IInstanceAIForm) {
           )}
         </>
       ),
-      placeholder: apiKeyPlaceholder,
+      placeholder: "sk-...",
       error: Boolean(errors[apiKeyFieldKey]),
       required: false,
     },
@@ -188,7 +176,7 @@ export function InstanceAIForm(props: IInstanceAIForm) {
               )}
             />
             <p className="pt-0.5 text-11 text-tertiary">
-              Choose OpenAI, Anthropic, Gemini, or an OpenAI-compatible server such as Ollama, vLLM, or LiteLLM.
+              Choose OpenAI or an OpenAI-compatible server such as Ollama, vLLM, or LiteLLM.
             </p>
           </div>
           {aiFormFields.map((field) => (

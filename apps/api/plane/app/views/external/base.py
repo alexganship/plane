@@ -47,27 +47,6 @@ class OpenAIProvider(LLMProvider):
     default_model = "gpt-4o-mini"
 
 
-class AnthropicProvider(LLMProvider):
-    name = "Anthropic"
-    models = [
-        "claude-3-5-sonnet-20240620",
-        "claude-3-haiku-20240307",
-        "claude-3-opus-20240229",
-        "claude-3-sonnet-20240229",
-        "claude-2.1",
-        "claude-2",
-        "claude-instant-1.2",
-        "claude-instant-1",
-    ]
-    default_model = "claude-3-sonnet-20240229"
-
-
-class GeminiProvider(LLMProvider):
-    name = "Gemini"
-    models = ["gemini-pro", "gemini-1.5-pro-latest", "gemini-pro-vision"]
-    default_model = "gemini-pro"
-
-
 class OpenAICompatibleProvider(LLMProvider):
     name = "OpenAI compatible"
     models = []
@@ -77,8 +56,6 @@ class OpenAICompatibleProvider(LLMProvider):
 SUPPORTED_PROVIDERS = {
     "openai": OpenAIProvider,
     "openai_compatible": OpenAICompatibleProvider,
-    "anthropic": AnthropicProvider,
-    "gemini": GeminiProvider,
 }
 
 OPENAI_COMPATIBLE_PLACEHOLDER_API_KEY = "plane-openai-compatible"
@@ -189,16 +166,6 @@ def get_llm_config() -> LLMConfig:
         if not model:
             model = provider.default_model
 
-    else:
-        if not api_key:
-            error = f"LLM_API_KEY is required for {provider.name} provider"
-            log_exception(ValueError(error))
-            return LLMConfig(None, None, provider_key, error=error)
-
-        # Preserve existing non-OpenAI behavior.
-        if not model:
-            model = provider.default_model
-
     # Validate model is supported by provider
     if model not in provider.models:
         error = (
@@ -222,10 +189,6 @@ def get_llm_response(
     """Helper to get LLM completion response"""
     final_text = task + "\n" + prompt
     try:
-        # For Gemini, prepend provider name to model
-        if provider.lower() == "gemini":
-            model = f"gemini/{model}"
-
         client_kwargs = {"api_key": api_key}
         if provider.lower() == "openai_compatible" and base_url:
             client_kwargs["base_url"] = base_url

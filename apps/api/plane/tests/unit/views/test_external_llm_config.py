@@ -80,6 +80,20 @@ class TestExternalLLMConfig:
         assert llm_config.provider == "openai"
         mock_log_exception.assert_not_called()
 
+    @pytest.mark.parametrize("provider", ["anthropic", "gemini"])
+    @patch("plane.app.views.external.base.log_exception")
+    @patch("plane.app.views.external.base.get_configuration_value")
+    def test_unsupported_provider_is_rejected(
+        self, mock_get_configuration_value, mock_log_exception, provider
+    ):
+        mock_get_configuration_value.return_value = ("sk-test", "", provider, "model-name", "")
+
+        llm_config = base.get_llm_config()
+
+        assert llm_config.error == f"Unsupported LLM provider: {provider}"
+        assert llm_config.api_key is None
+        mock_log_exception.assert_called_once()
+
     @patch("plane.app.views.external.base.log_exception")
     @patch("plane.app.views.external.base.get_configuration_value")
     def test_openai_compatible_accepts_blank_api_key_and_arbitrary_model(
