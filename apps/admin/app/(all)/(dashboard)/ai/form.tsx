@@ -49,6 +49,7 @@ export function InstanceAIForm(props: IInstanceAIForm) {
 
   const llmProvider = watch("LLM_PROVIDER");
   const isOpenAICompatible = llmProvider === "openai_compatible";
+  const apiKeyFieldKey = isOpenAICompatible ? "LLM_OPENAI_COMPATIBLE_API_KEY" : "LLM_API_KEY";
   const providerLabel =
     LLM_PROVIDER_OPTIONS[(llmProvider as TInstanceAIProvider) || "openai"] ?? LLM_PROVIDER_OPTIONS.openai;
 
@@ -90,7 +91,7 @@ export function InstanceAIForm(props: IInstanceAIForm) {
         ]
       : []),
     {
-      key: isOpenAICompatible ? "LLM_OPENAI_COMPATIBLE_API_KEY" : "LLM_API_KEY",
+      key: apiKeyFieldKey,
       type: "password",
       label: isOpenAICompatible ? "Compatible API key" : "API key",
       description: (
@@ -113,7 +114,7 @@ export function InstanceAIForm(props: IInstanceAIForm) {
         </>
       ),
       placeholder: "sk-asddassdfasdefqsdfasd23das3dasdcasd",
-      error: Boolean(errors.LLM_API_KEY),
+      error: Boolean(errors[apiKeyFieldKey]),
       required: false,
     },
   ];
