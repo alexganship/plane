@@ -21,6 +21,8 @@ from .views import (
     MagicGenerateEndpoint,
     MagicSignInEndpoint,
     MagicSignUpEndpoint,
+    OIDCCallbackEndpoint,
+    OIDCOauthInitiateEndpoint,
     SignInAuthEndpoint,
     SignOutAuthEndpoint,
     SignUpAuthEndpoint,
@@ -37,6 +39,8 @@ from .views import (
     MagicGenerateSpaceEndpoint,
     MagicSignInSpaceEndpoint,
     MagicSignUpSpaceEndpoint,
+    OIDCCallbackSpaceEndpoint,
+    OIDCOauthInitiateSpaceEndpoint,
     SignInAuthSpaceEndpoint,
     SignUpAuthSpaceEndpoint,
     SignOutAuthSpaceEndpoint,
@@ -114,6 +118,19 @@ urlpatterns = [
         "spaces/gitlab/callback/",
         GitLabCallbackSpaceEndpoint.as_view(),
         name="space-gitlab-callback",
+    ),
+    ## OIDC Oauth
+    path("oidc/", OIDCOauthInitiateEndpoint.as_view(), name="oidc-initiate"),
+    path("oidc/callback/", OIDCCallbackEndpoint.as_view(), name="oidc-callback"),
+    path(
+        "spaces/oidc/",
+        OIDCOauthInitiateSpaceEndpoint.as_view(),
+        name="space-oidc-initiate",
+    ),
+    path(
+        "spaces/oidc/callback/",
+        OIDCCallbackSpaceEndpoint.as_view(),
+        name="space-oidc-callback",
     ),
     # Email Check
     path("email-check/", EmailCheckEndpoint.as_view(), name="email-check"),
