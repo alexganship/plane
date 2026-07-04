@@ -4,11 +4,12 @@
  * See the LICENSE file for details.
  */
 
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { Lightbulb } from "lucide-react";
 import { Button } from "@plane/propel/button";
 import { TOAST_TYPE, setToast } from "@plane/propel/toast";
-import type { IFormattedInstanceConfiguration, TInstanceAIConfigurationKeys } from "@plane/types";
+import type { IFormattedInstanceConfiguration, TInstanceAIConfigurationKeys, TInstanceAIProvider } from "@plane/types";
+import { CustomSelect } from "@plane/ui";
 // components
 import type { TControllerInputFormField } from "@/components/common/controller-input";
 import { ControllerInput } from "@/components/common/controller-input";
@@ -21,6 +22,11 @@ type IInstanceAIForm = {
 
 type AIFormValues = Record<TInstanceAIConfigurationKeys, string>;
 
+const LLM_PROVIDER_OPTIONS: Record<TInstanceAIProvider, string> = {
+  openai: "OpenAI",
+  openai_compatible: "OpenAI Compatible",
+};
+
 export function InstanceAIForm(props: IInstanceAIForm) {
   const { config } = props;
   // store
@@ -28,14 +34,22 @@ export function InstanceAIForm(props: IInstanceAIForm) {
   // form data
   const {
     handleSubmit,
+    watch,
     control,
     formState: { errors, isSubmitting },
   } = useForm<AIFormValues>({
     defaultValues: {
       LLM_API_KEY: config["LLM_API_KEY"],
+      LLM_BASE_URL: config["LLM_BASE_URL"],
       LLM_MODEL: config["LLM_MODEL"],
+      LLM_PROVIDER: config["LLM_PROVIDER"] || "openai",
     },
   });
+
+  const llmProvider = watch("LLM_PROVIDER");
+  const isOpenAICompatible = llmProvider === "openai_compatible";
+  const providerLabel =
+    LLM_PROVIDER_OPTIONS[(llmProvider as TInstanceAIProvider) || "openai"] ?? LLM_PROVIDER_OPTIONS.openai;
 
   const aiFormFields: TControllerInputFormField[] = [
     {
@@ -44,7 +58,8 @@ export function InstanceAIForm(props: IInstanceAIForm) {
       label: "LLM Model",
       description: (
         <>
-          Choose an OpenAI engine.{" "}
+          Use an OpenAI or OpenAI-compatible model name, for example{" "}
+          {isOpenAICompatible ? "llama3.1, qwen2.5-coder, or mistral." : "gpt-4o-mini."}{" "}
           <a
             href="https://platform.openai.com/docs/models/overview"
             target="_blank"
@@ -55,25 +70,45 @@ export function InstanceAIForm(props: IInstanceAIForm) {
           </a>
         </>
       ),
-      placeholder: "gpt-4o-mini",
+      placeholder: isOpenAICompatible ? "llama3.1" : "gpt-4o-mini",
       error: Boolean(errors.LLM_MODEL),
       required: false,
     },
+    ...(isOpenAICompatible
+      ? [
+          {
+            key: "LLM_BASE_URL",
+            type: "text",
+            label: "Base URL",
+            description:
+              "OpenAI-compatible API endpoint, for example http://ollama:11434/v1, http://vllm:8000/v1, or http://litellm:4000/v1.",
+            placeholder: "http://ollama:11434/v1",
+            error: Boolean(errors.LLM_BASE_URL),
+            required: false,
+          } satisfies TControllerInputFormField,
+        ]
+      : []),
     {
       key: "LLM_API_KEY",
       type: "password",
       label: "API key",
       description: (
         <>
-          You will find your API key{" "}
-          <a
-            href="https://platform.openai.com/api-keys"
-            target="_blank"
-            className="text-accent-primary hover:underline"
-            rel="noreferrer"
-          >
-            here.
-          </a>
+          {isOpenAICompatible ? (
+            "Some local OpenAI-compatible servers accept any placeholder key."
+          ) : (
+            <>
+              You will find your API key{" "}
+              <a
+                href="https://platform.openai.com/api-keys"
+                target="_blank"
+                className="text-accent-primary hover:underline"
+                rel="noreferrer"
+              >
+                here.
+              </a>
+            </>
+          )}
         </>
       ),
       placeholder: "sk-asddassdfasdefqsdfasd23das3dasdcasd",
@@ -100,10 +135,37 @@ export function InstanceAIForm(props: IInstanceAIForm) {
     <div className="space-y-8">
       <div className="space-y-3">
         <div>
-          <div className="pb-1 text-18 font-medium text-primary">OpenAI</div>
-          <div className="text-13 font-regular text-tertiary">If you use ChatGPT, this is for you.</div>
+          <div className="pb-1 text-18 font-medium text-primary">OpenAI / OpenAI-compatible</div>
+          <div className="text-13 font-regular text-tertiary">
+            Configure OpenAI or self-hosted OpenAI-compatible LLM endpoints.
+          </div>
         </div>
         <div className="grid-col grid w-full grid-cols-1 items-center justify-between gap-x-12 gap-y-8 lg:grid-cols-3">
+          <div className="flex flex-col gap-1">
+            <h4 className="text-13 text-tertiary">Provider</h4>
+            <Controller
+              control={control}
+              name="LLM_PROVIDER"
+              render={({ field: { value: providerValue, onChange } }) => (
+                <CustomSelect
+                  value={providerValue}
+                  label={providerLabel}
+                  onChange={onChange}
+                  buttonClassName="rounded-md border-subtle"
+                  input
+                >
+                  {Object.entries(LLM_PROVIDER_OPTIONS).map(([key, label]) => (
+                    <CustomSelect.Option key={key} value={key} className="w-full">
+                      {label}
+                    </CustomSelect.Option>
+                  ))}
+                </CustomSelect>
+              )}
+            />
+            <p className="pt-0.5 text-11 text-tertiary">
+              Choose OpenAI or an OpenAI-compatible server such as Ollama, vLLM, or LiteLLM.
+            </p>
+          </div>
           {aiFormFields.map((field) => (
             <ControllerInput
               key={field.key}
@@ -128,7 +190,7 @@ export function InstanceAIForm(props: IInstanceAIForm) {
         <div className="relative inline-flex items-center gap-1.5 rounded-sm border border-accent-subtle bg-accent-subtle px-4 py-2 text-caption-sm-regular text-accent-secondary">
           <Lightbulb className="size-4" />
           <div>
-            If you have a preferred AI models vendor, please get in{" "}
+            Use OpenAI-compatible endpoints for self-hosted LLM servers. For other AI provider needs, please get in{" "}
             <a className="font-medium underline" href="https://plane.so/contact">
               touch with us.
             </a>
