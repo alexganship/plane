@@ -98,11 +98,15 @@ def get_llm_config() -> LLMConfig:
         - api_key, model, provider, base_url, error
     """
     try:
-        api_key, provider_key, model, base_url = get_configuration_value(
+        api_key, compatible_api_key, provider_key, model, base_url = get_configuration_value(
             [
                 {
                     "key": "LLM_API_KEY",
                     "default": os.environ.get("LLM_API_KEY", None),
+                },
+                {
+                    "key": "LLM_OPENAI_COMPATIBLE_API_KEY",
+                    "default": os.environ.get("LLM_OPENAI_COMPATIBLE_API_KEY", None),
                 },
                 {
                     "key": "LLM_PROVIDER",
@@ -124,6 +128,7 @@ def get_llm_config() -> LLMConfig:
 
     provider_key = (provider_key or "").strip().lower()
     api_key = api_key or None
+    compatible_api_key = compatible_api_key or None
     model = model or None
     base_url = base_url or None
 
@@ -145,7 +150,7 @@ def get_llm_config() -> LLMConfig:
             return LLMConfig(None, None, provider_key, base_url=base_url, error=error)
 
         return LLMConfig(
-            api_key or OPENAI_COMPATIBLE_PLACEHOLDER_API_KEY,
+            compatible_api_key or OPENAI_COMPATIBLE_PLACEHOLDER_API_KEY,
             model,
             provider_key,
             base_url=base_url,

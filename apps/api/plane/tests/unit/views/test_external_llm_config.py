@@ -17,6 +17,12 @@ class TestExternalLLMConfig:
     def test_llm_base_url_instance_config_key(self):
         config_by_key = {config["key"]: config for config in llm_config_variables}
 
+        assert config_by_key["LLM_OPENAI_COMPATIBLE_API_KEY"] == {
+            "key": "LLM_OPENAI_COMPATIBLE_API_KEY",
+            "value": os.environ.get("LLM_OPENAI_COMPATIBLE_API_KEY"),
+            "category": "AI",
+            "is_encrypted": True,
+        }
         assert config_by_key["LLM_BASE_URL"] == {
             "key": "LLM_BASE_URL",
             "value": os.environ.get("LLM_BASE_URL", ""),
@@ -31,6 +37,7 @@ class TestExternalLLMConfig:
     ):
         mock_get_configuration_value.return_value = (
             "sk-test",
+            "",
             "openai",
             "gpt-4o-mini",
             "http://localhost:11434/v1",
@@ -50,7 +57,7 @@ class TestExternalLLMConfig:
     def test_openai_rejects_missing_api_key(
         self, mock_get_configuration_value, mock_log_exception
     ):
-        mock_get_configuration_value.return_value = ("", "openai", "gpt-4o-mini", "")
+        mock_get_configuration_value.return_value = ("", "", "openai", "gpt-4o-mini", "")
 
         llm_config = base.get_llm_config()
 
@@ -63,7 +70,7 @@ class TestExternalLLMConfig:
     def test_openai_uses_default_model_when_model_is_blank(
         self, mock_get_configuration_value, mock_log_exception
     ):
-        mock_get_configuration_value.return_value = ("sk-test", "openai", "", "")
+        mock_get_configuration_value.return_value = ("sk-test", "", "openai", "", "")
 
         llm_config = base.get_llm_config()
 
@@ -79,6 +86,7 @@ class TestExternalLLMConfig:
         self, mock_get_configuration_value, mock_log_exception
     ):
         mock_get_configuration_value.return_value = (
+            "",
             "",
             "openai_compatible",
             "llama3.1:8b",
@@ -96,10 +104,49 @@ class TestExternalLLMConfig:
 
     @patch("plane.app.views.external.base.log_exception")
     @patch("plane.app.views.external.base.get_configuration_value")
+    def test_openai_compatible_does_not_reuse_openai_api_key(
+        self, mock_get_configuration_value, mock_log_exception
+    ):
+        mock_get_configuration_value.return_value = (
+            "sk-official-openai",
+            "",
+            "openai_compatible",
+            "llama3.1:8b",
+            "http://localhost:11434/v1",
+        )
+
+        llm_config = base.get_llm_config()
+
+        assert llm_config.error is None
+        assert llm_config.api_key == base.OPENAI_COMPATIBLE_PLACEHOLDER_API_KEY
+        mock_log_exception.assert_not_called()
+
+    @patch("plane.app.views.external.base.log_exception")
+    @patch("plane.app.views.external.base.get_configuration_value")
+    def test_openai_compatible_uses_compatible_api_key(
+        self, mock_get_configuration_value, mock_log_exception
+    ):
+        mock_get_configuration_value.return_value = (
+            "sk-official-openai",
+            "sk-compatible",
+            "openai_compatible",
+            "llama3.1:8b",
+            "http://localhost:11434/v1",
+        )
+
+        llm_config = base.get_llm_config()
+
+        assert llm_config.error is None
+        assert llm_config.api_key == "sk-compatible"
+        mock_log_exception.assert_not_called()
+
+    @patch("plane.app.views.external.base.log_exception")
+    @patch("plane.app.views.external.base.get_configuration_value")
     def test_openai_compatible_requires_base_url(
         self, mock_get_configuration_value, mock_log_exception
     ):
         mock_get_configuration_value.return_value = (
+            "",
             "",
             "openai_compatible",
             "llama3.1:8b",
@@ -118,6 +165,7 @@ class TestExternalLLMConfig:
         self, mock_get_configuration_value, mock_log_exception
     ):
         mock_get_configuration_value.return_value = (
+            "",
             "",
             "openai_compatible",
             "",

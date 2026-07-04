@@ -42,6 +42,7 @@ export function InstanceAIForm(props: IInstanceAIForm) {
       LLM_API_KEY: config["LLM_API_KEY"],
       LLM_BASE_URL: config["LLM_BASE_URL"],
       LLM_MODEL: config["LLM_MODEL"],
+      LLM_OPENAI_COMPATIBLE_API_KEY: config["LLM_OPENAI_COMPATIBLE_API_KEY"],
       LLM_PROVIDER: config["LLM_PROVIDER"] || "openai",
     },
   });
@@ -89,13 +90,13 @@ export function InstanceAIForm(props: IInstanceAIForm) {
         ]
       : []),
     {
-      key: "LLM_API_KEY",
+      key: isOpenAICompatible ? "LLM_OPENAI_COMPATIBLE_API_KEY" : "LLM_API_KEY",
       type: "password",
-      label: "API key",
+      label: isOpenAICompatible ? "Compatible API key" : "API key",
       description: (
         <>
           {isOpenAICompatible ? (
-            "Some local OpenAI-compatible servers accept any placeholder key."
+            "Optional. Required only if your OpenAI-compatible gateway requires authentication."
           ) : (
             <>
               You will find your API key{" "}

@@ -290,6 +290,12 @@ llm_config_variables = [
         "is_encrypted": True,
     },
     {
+        "key": "LLM_OPENAI_COMPATIBLE_API_KEY",
+        "value": os.environ.get("LLM_OPENAI_COMPATIBLE_API_KEY"),
+        "category": "AI",
+        "is_encrypted": True,
+    },
+    {
         "key": "LLM_PROVIDER",
         "value": os.environ.get("LLM_PROVIDER", "openai"),
         "category": "AI",
